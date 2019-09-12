@@ -57,16 +57,16 @@ def get_f0_from_acf(r, fs):
 	f0 = np.zeros(NumOfBlocks)
 
 	for i in range (NumOfBlocks):
+		try:
+			peaks, _ = find_peaks(r[i,:], height=0)
+			firstpeak = peaks[0]
+			secondpeak = peaks[1]
 
-		peaks, _ = find_peaks(r[i,:], height=0)
+			period = secondpeak - firstpeak
 
-		firstpeak = peaks[0]
-		secondpeak = peaks[1]
-
-		period = secondpeak - firstpeak
-
-		time = np.float(period*(1/fs))
-		f0[i] = np.float(1/time)
+			time = np.float(period*(1/fs))
+			f0[i] = np.float(1/time)
+		except: pass
 
 	return f0;
 
@@ -96,7 +96,7 @@ def sinusoidal_test():
 	f0, timeInSec = track_pitch_acf(testsignal,1024,512,fs)
 	print(f0, timeInSec)
 
-sinusoidal_test()
+#sinusoidal_test()
 
 # B.2 (LL added 9/12/19)
 # TO DO: need to calculate the log without using the math library
@@ -128,25 +128,36 @@ def eval_pitchtrack(estimateInHz, groundtruthInHz):
 		freq_cent[freq_nonz_ind] = 1200*np.log2(normalized_frequency)
 		return freq_cent
 
-	non_zero = (groundtruthInHz>0)
+	estimateInHz = hz2cents(estimateInHz)
+	groundtruthInHz = hz2cents(groundtruthInHz)
 
+	non_zero = (groundtruthInHz>0)
 	error = groundtruthInHz[non_zero] - estimateInHz[non_zero]
 	rms = sqrt(mean(square(error)))
 	return rms
 
 # B.4
-def run_evaluation(path):
+def run_evaluation():
+
+	blockSize = 1024
+	hopSize = 512
+	fs = 44100
 
 	def read_label(path):
 		oup = []
 		f = open(path, "r")
 		for x in f:
-  			oup.append(x.split('     ')[1])
+  			oup.append(x.split('     ')[2])
 		return oup
 
-	files = ['01-D_AMairena.f0.Corrected','24-M1_AMairena-Martinete.f0.Corrected','63-M2_AMairena.f0.Corrected']
+	files = ['01-D_AMairena','24-M1_AMairena-Martinete','63-M2_AMairena']
 	for file in files:
 		fs, wav = wavfile.read('./trainData/'+file+'.wav')
 		f0, timeInSec = track_pitch_acf(wav, blockSize, hopSize, fs)
-		gtHz = read_label('./trainData/'+file+'.txt')
-		rms = eval_pitchtrack(f0, gtHz)
+		
+		gtHz = np.array(read_label('./trainData/'+file+'.f0.Corrected.txt')).astype(np.float)
+		#f0 = np.load(file+'.f0.npy')
+		rms = eval_pitchtrack(f0, gtHz) 
+		print(rms)
+
+run_evaluation()
