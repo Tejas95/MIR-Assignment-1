@@ -54,7 +54,9 @@ def comp_acf(inputVector, bIsNormalized):
 
 def get_f0_from_acf(r, fs):
 	
-	f0 = []
+	NumOfBlocks = len(r)
+
+	f0 = np.zeros(NumOfBlocks)
 
 	for i in range (NumOfBlocks):
 
