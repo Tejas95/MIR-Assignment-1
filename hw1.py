@@ -57,16 +57,21 @@ def get_f0_from_acf(r, fs):
 	f0 = np.zeros(NumOfBlocks)
 
 	for i in range (NumOfBlocks):
-		try:
+
 			peaks, _ = find_peaks(r[i,:], height=0)
+			
 			firstpeak = peaks[0]
 			secondpeak = peaks[1]
 
 			period = secondpeak - firstpeak
+			
+			if period == 0:
+				return 0;
+			
+			else:
 
 			time = np.float(period*(1/fs))
 			f0[i] = np.float(1/time)
-		except: pass
 
 	return f0;
 
