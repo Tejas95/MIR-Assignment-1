@@ -70,10 +70,10 @@ def get_f0_from_acf(r, fs):
 			
 			else:
 
-			time = np.float(period*(1/fs))
-			f0[i] = np.float(1/time)
+				time = np.float(period*(1/fs))
+				f0[i] = np.float(1/time)
 
-	return f0;
+				return f0;
 
 # A.4
 def track_pitch_acf(x,blockSize,hopSize,fs):
