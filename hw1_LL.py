@@ -1,67 +1,143 @@
 import numpy as np
 from numpy import mean, sqrt, square, arange
 from scipy.io import wavfile
+from scipy.signal import find_peaks
 import matplotlib.pyplot as plt 
 
 # A.1
-# LL 9/12/19: edited the block_audio function to make sure each block 
-# starts 1 hop size after the last block instead of at the beginning of x
-# Also divided the index by fs to get the timeInSec
 def block_audio(x,blockSize,hopSize,fs):
-    i=1
-    xb=[]
+    
     timeInSec=[]
-    stop=0
-    while stop<len(x):
-        start=(i-1)*hopSize
-        stop=start+blockSize
-        i=i+1
-        starttime=start/fs
-        xb.append(x[start:stop])
-        timeInSec.append(starttime)
+    NumOfBlocks   = int(np.round(len(x)/hopSize))
 
-    return np.array(xb), np.array(timeInSec)
+    out = np.zeros((NumOfBlocks, blockSize))
+
+    for n in range (NumOfBlocks):
+        start     = n*hopSize
+        stop      = min(len(x),start + blockSize)
+
+        if stop - start < blockSize:
+
+            vec = np.zeros(stop-start)
+
+            vec[:] = np.array(x[start:stop])
+            diff = blockSize - (stop-start)
+            vec = np.append(vec, np.zeros(diff))
+            
+            out[n,:] = vec
+
+        else:
+
+            out[n,:] = x[start:stop]
+
+        timeInSec.append(start)
+
+    return out,np.array(timeInSec);
 
 # A.2 
-'''
+# Amy, update out->inputVector
+# Laney added normalization
 def comp_acf(inputVector, bIsNormalized):
-    result = np.correlate(x, x, mode='full')
-    return result[result.size // 2:]
-'''
+    NumOfBlocks = len(inputVector)
+    N = len(inputVector[0])
+
+    ACF = np.zeros((NumOfBlocks, N))
+
+    #ACF
+    for k in range (NumOfBlocks):
+        print(k,NumOfBlocks)
+        for i in range (N):
+            for j in range (N-i):
+                ACF[k,i] = ACF[k,i] + inputVector[k,j] * inputVector[k,i+j]  
+   
+    if bIsNormalized=='TRUE':
+        r=ACF/sum([x**2 for x in inputVector])
+    else:
+        r=ACF
+       
+    return r;
 
 # A.3
-'''
 def get_f0_from_acf(r, fs):
+    
+    NumOfBlocks = len(r)
 
-'''
+    f0 = np.zeros(NumOfBlocks)
+
+    for i in range (NumOfBlocks):
+
+            peaks, _ = find_peaks(r[i,:], height=0)
+            
+            firstpeak = peaks[0]
+            secondpeak = peaks[1]
+
+            period = secondpeak - firstpeak
+            
+            if period == 0:
+                return 0;
+            
+            else:
+
+                time = np.float(period*(1/fs))
+                f0[i] = np.float(1/time)
+
+                return f0;
 
 # A.4
 def track_pitch_acf(x,blockSize,hopSize,fs):
-	xb, timeInSec = block_audio(x,blockSize,hopSize,fs)
-	r = comp_acf()
-	f0 = get_f0_from_acf(r,fs)
+    xb, timeInSec = block_audio(x,blockSize,hopSize,fs)
+    r = comp_acf(xb, None)
+    f0 = get_f0_from_acf(r,fs)
 
-	return f0, timeInSec
+    return f0, timeInSec
 
-# B.1 (LL added 9/12/19)
+# B.1 
+def sinusoidal_test():
+    # create 2 time vectors, 0 to 1 sec and 1 to 2 sec, each at a sample rate of 44.1kHz
+    fs=44100
+    timeA=np.linspace(start=0,stop=1,num=fs,endpoint=False)
+    timeB=np.linspace(start=1,stop=2,num=fs,endpoint=False)
 
-# create 2 time vectors, 0 to 1 sec and 1 to 2 sec, each at a sample rate of 44.1kHz
-fs=44100
-timeA=np.linspace(start=0,stop=1,num=fs,endpoint=False)
-timeB=np.linspace(start=1,stop=2,num=fs,endpoint=False)
+    # generate test signals at 441 Hz from 0 to 1 sec and 882 Hz from 1 to 2 sec
+    testsignalA=np.sin(2*np.pi*441*timeA)
+    testsignalB=np.sin(2*np.pi*882*timeB)
 
-# generate test signals at 441 Hz from 0 to 1 sec and 882 Hz from 1 to 2 sec
-testsignalA=np.sin(2*np.pi*441*timeA)
-testsignalB=np.sin(2*np.pi*882*timeB)
+    # append arrays to create a 2 sec test signal
+    #time=np.append(timeA,timeB)
+    testsignal=np.append(testsignalA,testsignalB)   
 
-# append arrays to create a 2 sec test signal
-time=np.append(timeA,timeB)
-testsignal=np.append(testsignalA,testsignalB)   
+    f0, timeInSec = track_pitch_acf(testsignal,1024,512,fs)  
+    
+    err=np.zeros(len(f0))
+    for i in len(f0):
+        if 0<=timeInSec[i]<1:
+            err[i]=f0[i]-440
+        elif timeInSec[i]>=1:
+            err[i]=f0[i]-880
+  
+    #plot f0 
+    
+    plt.plot(f0,timeInSec)
+    plt.xlabel('Time (seconds)')
+    plt.ylabel('Estimated Frequency (Hz)')
+    plt.title('Estimated Frequency of Test Signal')
+    plt.show
+    
+    plt.show(block=False)
+    
+    #plot error
+    
+    plt.plot(err,timeInSec)
+    plt.xlabel('Time (seconds)')
+    plt.ylabel('Difference between Estimated and Actual Frequency (Hz)')
+    plt.title('Error of Estimated Test Signal Frequency')
+    plt.show
+    
+    plt.show(block=False)
+   
+sinusoidal_test()
 
-# B.2 (LL added 9/12/19)
-# TO DO: need to calculate the log without using the math library
-import math
-
+# B.2 
 def convert_freq2midi(freqInHz):
   
     typ=type(freqInHz)
@@ -79,37 +155,47 @@ def convert_freq2midi(freqInHz):
         vectfunc=np.vectorize(pitch)
         pitchInMIDI=list(vectfunc(freqInHz))
     return pitchInMIDI
-    
 
 # B.3
 def eval_pitchtrack(estimateInHz, groundtruthInHz):
 
-	def hz2cents(freq_hz, base_frequency=10.0):
-		freq_cent = np.zeros(freq_hz.shape[0])
-	    freq_nonz_ind = np.flatnonzero(freq_hz)
-	    normalized_frequency = np.abs(freq_hz[freq_nonz_ind])/base_frequency
-	    freq_cent[freq_nonz_ind] = 1200*np.log2(normalized_frequency)
-	    return freq_cent
+    def hz2cents(freq_hz, base_frequency=10.0):
+        freq_cent = np.zeros(freq_hz.shape[0])
+        freq_nonz_ind = np.flatnonzero(freq_hz)
+        normalized_frequency = np.abs(freq_hz[freq_nonz_ind])/base_frequency
+        freq_cent[freq_nonz_ind] = 1200*np.log2(normalized_frequency)
+        return freq_cent
 
-	non_zero = (groundtruthInHz>0)
+    estimateInHz = hz2cents(estimateInHz)
+    groundtruthInHz = hz2cents(groundtruthInHz)
 
-	error = groundtruthInHz[non_zero] - estimateInHz[non_zero]
-	rms = sqrt(mean(square(error)))
-	return rms
+    non_zero = (groundtruthInHz>0)
+    error = groundtruthInHz[non_zero] - estimateInHz[non_zero]
+    rms = sqrt(mean(square(error)))
+    return rms
 
 # B.4
-def run_evaluation(path):
+def run_evaluation():
 
-	def read_label(path):
-		oup = []
-		f = open(path, "r")
-		for x in f:
-  			oup.append(x.split('     ')[1])
-  		return oup
+    blockSize = 1024
+    hopSize = 512
+    fs = 44100
 
-	files = ['01-D_AMairena.f0.Corrected','24-M1_AMairena-Martinete.f0.Corrected','63-M2_AMairena.f0.Corrected']
-	for file in files:
-		fs, wav = wavfile.read('./trainData/'+file+'.wav')
-		f0, timeInSec = track_pitch_acf(wav, blockSize, hopSize, fs)
-		gtHz = read_label('./trainData/'+file+'.txt')
-		rms = eval_pitchtrack(f0, gtHz)
+    def read_label(path):
+        oup = []
+        f = open(path, "r")
+        for x in f:
+              oup.append(x.split('     ')[2])
+        return oup
+
+    files = ['01-D_AMairena','24-M1_AMairena-Martinete','63-M2_AMairena']
+    for file in files:
+        fs, wav = wavfile.read('./trainData/'+file+'.wav')
+        f0, timeInSec = track_pitch_acf(wav, blockSize, hopSize, fs)
+        
+        gtHz = np.array(read_label('./trainData/'+file+'.f0.Corrected.txt')).astype(np.float)
+        #f0 = np.load(file+'.f0.npy')
+        rms = eval_pitchtrack(f0, gtHz) 
+        print(rms)
+
+run_evaluation()
