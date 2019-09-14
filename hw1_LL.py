@@ -37,19 +37,17 @@ def block_audio(x,blockSize,hopSize,fs):
 # A.2 
 # Amy, update out->inputVector
 # Laney added normalization
-def comp_acf(inputVector, bIsNormalized):
-    NumOfBlocks = len(inputVector)
-    N = len(inputVector[0])
+def comp_acf(inputVector, bIsNormalized): 
+    
+    N = len(inputVector)
+    ACF = np.zeros((N))
 
-    ACF = np.zeros((NumOfBlocks, N))
+	#ACF
 
-    #ACF
-    for k in range (NumOfBlocks):
-        print(k,NumOfBlocks)
-        for i in range (N):
-            for j in range (N-i):
-                ACF[k,i] = ACF[k,i] + inputVector[k,j] * inputVector[k,i+j]  
-   
+	for i in range (N):
+		for j in range (N-i):
+			ACF[i] = ACF[i] + inputVector[j] * inputVector[i+j]  
+	
     if bIsNormalized=='TRUE':
         r=ACF/sum([x**2 for x in inputVector])
     else:
@@ -60,36 +58,29 @@ def comp_acf(inputVector, bIsNormalized):
 # A.3
 def get_f0_from_acf(r, fs):
     
-    NumOfBlocks = len(r)
+    peaks, _ = find_peaks(r, height=0)
 
-    f0 = np.zeros(NumOfBlocks)
+	firstpeak = peaks[0]
+	secondpeak = peaks[1]
 
-    for i in range (NumOfBlocks):
-
-            peaks, _ = find_peaks(r[i,:], height=0)
-            
-            firstpeak = peaks[0]
-            secondpeak = peaks[1]
-
-            period = secondpeak - firstpeak
-            
-            if period == 0:
-                return 0;
-            
-            else:
-
-                time = np.float(period*(1/fs))
-                f0[i] = np.float(1/time)
-
-                return f0;
+	period = secondpeak - firstpeak
+	
+	f0 = np.float(fs/period)
+	return f0;
 
 # A.4
 def track_pitch_acf(x,blockSize,hopSize,fs):
     xb, timeInSec = block_audio(x,blockSize,hopSize,fs)
-    r = comp_acf(xb, None)
-    f0 = get_f0_from_acf(r,fs)
+	
+	NumOfBlocks   = int(np.round(len(x)/hopSize))
 
-    return f0, timeInSec
+	f0 = np.zeros((NumOfBlocks))
+
+	for i in range (len(xb)):
+		r = comp_acf(xb[i], None)
+		f0[i] = get_f0_from_acf(r,fs)
+
+	return f0, timeInSec
 
 # B.1 
 def sinusoidal_test():
