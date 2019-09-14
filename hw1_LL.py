@@ -58,13 +58,13 @@ def comp_acf(inputVector, bIsNormalized):
 # A.3
 def get_f0_from_acf(r, fs):
     
-    peaks, _ = find_peaks(r, height=0)
+	peaks, _ = find_peaks(r, height=0)
 
 	firstpeak = peaks[0]
 	secondpeak = peaks[1]
 
 	period = secondpeak - firstpeak
-	
+
 	f0 = np.float(fs/period)
 	return f0;
 
