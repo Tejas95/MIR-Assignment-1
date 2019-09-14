@@ -134,7 +134,8 @@ def sinusoidal_test():
     plt.show
     
     plt.show(block=False)
-    return timeInSec
+    #output f0 to check the fundamental freqs assigned to each block
+    return f0
    
 sinusoidal_test()
 
