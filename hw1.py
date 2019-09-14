@@ -36,14 +36,14 @@ def block_audio(x,blockSize,hopSize,fs):
 # A.2 
 # Amy, update out->inputVector
 def comp_acf(inputVector, bIsNormalized):
+
 	NumOfBlocks = len(inputVector)
 	N = len(inputVector[0])
-
 	r = np.zeros((NumOfBlocks, N))
 
 	#ACF
 	for k in range (NumOfBlocks):
-		print(k,NumOfBlocks)
+		#print(k,NumOfBlocks)
 		for i in range (N):
 			for j in range (N-i):
 				r[k,i] = r[k,i] + inputVector[k,j] * inputVector[k,i+j]  
@@ -66,14 +66,14 @@ def get_f0_from_acf(r, fs):
 			period = secondpeak - firstpeak
 			
 			if period == 0:
-				return 0;
+				f0[i] = 0
 			
 			else:
 
 				time = np.float(period*(1/fs))
 				f0[i] = np.float(1/time)
 
-				return f0;
+	return f0;
 
 # A.4
 def track_pitch_acf(x,blockSize,hopSize,fs):
