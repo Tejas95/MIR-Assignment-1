@@ -30,7 +30,7 @@ def block_audio(x,blockSize,hopSize,fs):
 
             out[n,:] = x[start:stop]
 
-        timeInSec.append(start)
+        timeInSec.append(start/fs)
 
     return out,np.array(timeInSec);
 
@@ -134,6 +134,7 @@ def sinusoidal_test():
     plt.show
     
     plt.show(block=False)
+    return timeInSec
    
 sinusoidal_test()
 
