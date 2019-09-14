@@ -109,15 +109,15 @@ def sinusoidal_test():
     f0, timeInSec = track_pitch_acf(testsignal,1024,512,fs)  
     
     err=np.zeros(len(f0))
-    for i in len(f0):
+    for i in range(len(f0)):
         if 0<=timeInSec[i]<1:
-            err[i]=f0[i]-440
+            err[i]=f0[i]-441
         elif timeInSec[i]>=1:
-            err[i]=f0[i]-880
+            err[i]=f0[i]-882
   
     #plot f0 
     
-    plt.plot(f0,timeInSec)
+    plt.plot(timeInSec,f0)
     plt.xlabel('Time (seconds)')
     plt.ylabel('Estimated Frequency (Hz)')
     plt.title('Estimated Frequency of Test Signal')
@@ -127,7 +127,7 @@ def sinusoidal_test():
     
     #plot error
     
-    plt.plot(err,timeInSec)
+    plt.plot(timeInSec,err)
     plt.xlabel('Time (seconds)')
     plt.ylabel('Difference between Estimated and Actual Frequency (Hz)')
     plt.title('Error of Estimated Test Signal Frequency')
