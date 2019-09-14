@@ -45,8 +45,8 @@ def comp_acf(inputVector, bIsNormalized):
 	#ACF
 
     for i in range (N):
-		for j in range (N-i):
-			ACF[i] = ACF[i] + inputVector[j] * inputVector[i+j]  
+        for j in range (N-i):
+            ACF[i] = ACF[i] + inputVector[j] * inputVector[i+j]  
 	
     if bIsNormalized=='TRUE':
         r=ACF/sum([x**2 for x in inputVector])
@@ -77,8 +77,8 @@ def track_pitch_acf(x,blockSize,hopSize,fs):
     f0 = np.zeros((NumOfBlocks))
 
     for i in range (len(xb)):
-		r = comp_acf(xb[i], None)
-		f0[i] = get_f0_from_acf(r,fs)
+        r = comp_acf(xb[i], None)
+        f0[i] = get_f0_from_acf(r,fs)
 
     return f0, timeInSec;
 
@@ -100,18 +100,24 @@ def sinusoidal_test():
     f0, timeInSec = track_pitch_acf(testsignal,1024,512,fs)  
     
     err=np.zeros(len(f0))
+    err_nonzero=[]
+    err_sec=[]
+    
     for i in range(len(f0)):
         if 0<=timeInSec[i]<1:
             err[i]=f0[i]-441
         elif timeInSec[i]>=1:
             err[i]=f0[i]-882
+        if err[i] >0 or err[i] <0:
+            err_nonzero=np.append(err[i],err_nonzero)
+            err_sec=np.append([timeInSec[i],timeInSec[i]+1024/44100],err_sec)
   
     #plot f0 
     
     plt.plot(timeInSec,f0)
     plt.xlabel('Time (seconds)')
     plt.ylabel('Estimated Frequency (Hz)')
-    plt.title('Estimated Frequency of Test Signal')
+    plt.title('Figure 1. Estimated Frequency of Test Signal')
     plt.show
     
     plt.show(block=False)
@@ -121,12 +127,12 @@ def sinusoidal_test():
     plt.plot(timeInSec,err)
     plt.xlabel('Time (seconds)')
     plt.ylabel('Difference between Estimated and Actual Frequency (Hz)')
-    plt.title('Error of Estimated Test Signal Frequency')
+    plt.title('Figure 2. Error of Estimated Test Signal Frequency')
     plt.show
     
     plt.show(block=False)
-    #output f0 to check the fundamental freqs assigned to each block
-    return f0
+    #output error and location of the block in seconds for blocks with nonzero error
+    return err_nonzero, err_sec
    
 sinusoidal_test()
 
