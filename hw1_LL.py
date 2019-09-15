@@ -42,12 +42,14 @@ def comp_acf(inputVector, bIsNormalized):
     N = len(inputVector)
     ACF = np.zeros((N))
 
-	#ACF
-
-	for i in range (N):
-		for j in range (N-i):
-			ACF[i] = ACF[i] + inputVector[j] * inputVector[i+j]  
-	
+    #ACF
+    
+    for i in range (N):
+        for j in range (N-i):
+            ACF[i] = ACF[i] + inputVector[j] * inputVector[i+j]  
+    '''
+    ACF = np.correlate(inputVector, inputVector, mode='full')[len(inputVector)-1:]
+    '''
     if bIsNormalized=='TRUE':
         r=ACF/sum([x**2 for x in inputVector])
     else:
@@ -57,30 +59,31 @@ def comp_acf(inputVector, bIsNormalized):
 
 # A.3
 def get_f0_from_acf(r, fs):
-    
-	peaks, _ = find_peaks(r, height=0)
+    try:
+        peaks, _ = find_peaks(r, height=0)
 
-	firstpeak = peaks[0]
-	secondpeak = peaks[1]
+        firstpeak = peaks[0]
+        secondpeak = peaks[1]
 
-	period = secondpeak - firstpeak
+        period = secondpeak - firstpeak
 
-	f0 = np.float(fs/period)
-	return f0;
+        f0 = np.float(fs/period)
+        return f0;
+    except: 0
 
 # A.4
 def track_pitch_acf(x,blockSize,hopSize,fs):
     xb, timeInSec = block_audio(x,blockSize,hopSize,fs)
-	
-	NumOfBlocks   = int(np.round(len(x)/hopSize))
+    
+    NumOfBlocks   = int(np.round(len(x)/hopSize))
 
-	f0 = np.zeros((NumOfBlocks))
+    f0 = np.zeros((NumOfBlocks))
 
-	for i in range (len(xb)):
-		r = comp_acf(xb[i], None)
-		f0[i] = get_f0_from_acf(r,fs)
+    for i in range (len(xb)):
+        r = comp_acf(xb[i], None)
+        f0[i] = get_f0_from_acf(r,fs)
 
-	return f0, timeInSec
+    return f0, timeInSec
 
 # B.1 
 def sinusoidal_test():
@@ -174,11 +177,21 @@ def run_evaluation():
     hopSize = 512
     fs = 44100
 
-    def read_label(path):
+    def read_label(path, estimateTime):
+
+        es_idx = 0
+        pre = -1
+
         oup = []
+        time = []
         f = open(path, "r")
         for x in f:
-              oup.append(x.split('     ')[2])
+            time = float(x.split('     ')[0])
+            if es_idx < len(estimateTime):
+                while es_idx < len(estimateTime) and estimateTime[es_idx] < time and estimateTime[es_idx] > pre:
+                    oup.append(x.split('     ')[2])
+                    pre = estimateTime[es_idx]
+                    es_idx+=1
         return oup
 
     files = ['01-D_AMairena','24-M1_AMairena-Martinete','63-M2_AMairena']
@@ -186,8 +199,7 @@ def run_evaluation():
         fs, wav = wavfile.read('./trainData/'+file+'.wav')
         f0, timeInSec = track_pitch_acf(wav, blockSize, hopSize, fs)
         
-        gtHz = np.array(read_label('./trainData/'+file+'.f0.Corrected.txt')).astype(np.float)
-        #f0 = np.load(file+'.f0.npy')
+        gtHz = np.array(read_label('./trainData/'+file+'.f0.Corrected.txt',timeInSec)).astype(np.float)
         rms = eval_pitchtrack(f0, gtHz) 
         print(rms)
 
