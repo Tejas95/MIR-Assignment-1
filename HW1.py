@@ -161,8 +161,8 @@ def eval_pitchtrack(estimateInHz, groundtruthInHz):
     length = min(len(estimateInHz),len(groundtruthInHz))
 
     print (estimateInHz)
-    estimateInHz = np.array([convert_freq2midi(f) for f in estimateInHz]) #*100
-    groundtruthInHz = np.array([convert_freq2midi(f) for f in groundtruthInHz])#*100
+    estimateInHz = np.array([convert_freq2midi(f) for f in estimateInHz]) *100
+    groundtruthInHz = np.array([convert_freq2midi(f) for f in groundtruthInHz]) *100
    
     non_zero = (groundtruthInHz>0)
 
