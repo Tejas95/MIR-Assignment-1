@@ -43,34 +43,33 @@ def comp_acf(inputVector, bIsNormalized):
     ACF = np.zeros((N))
 
 	#ACF
-    '''
-    for i in range (N):
-        for j in range (N-i):
-            ACF[i] = ACF[i] + inputVector[j] * inputVector[i+j]  
-    '''
     ACF = np.correlate(inputVector, inputVector, mode='full')
-    normFactor= sum([x**2 for x in inputVector])
-    if bIsNormalized:
-        r=ACF[ACF.size // 2:]/normFactor
+    normFactor= 1 / sqrt(2 * sum(square(inputVector)))
+    if bIsNormalized == True:
+        r=ACF[ACF.size // 2:]*normFactor
     else:
         r=ACF[ACF.size // 2:]
     return r
 
 # A.3
 def get_f0_from_acf(r, fs):
-    try:
-        peaks, _ = find_peaks(r, height=0)
+    peaks, _ = find_peaks(r)
+    sort1 = np.flip(np.sort(r[peaks]),axis = 0)
+    if len(sort1)>=2:
+        for i in range (len(r)):
+            if sort1[0] == r[i]:
+                x1 = i
+            
+            if sort1[1] == r[i]:
+                x2 = i
 
-        firstpeak = peaks[0]
-        secondpeak = peaks[1]
+        firstpeak = x1
+        secondpeak = x2
 
         period = secondpeak - firstpeak
-
         f0 = np.float(fs/period)
         return f0;
-    except:
-        return 0
-
+   
 # A.4
 def track_pitch_acf(x,blockSize,hopSize,fs):
     xb, timeInSec = block_audio(x,blockSize,hopSize,fs)
@@ -80,8 +79,8 @@ def track_pitch_acf(x,blockSize,hopSize,fs):
     f0 = np.zeros((NumOfBlocks))
 
     for i in range (len(xb)):
-        r = comp_acf(xb[i], None)
-        f0[i] = get_f0_from_acf(r,fs)
+        r = comp_acf(xb[i], True)
+        f0[i] = get_f0_from_acf(r,fs)  
 
     return f0, timeInSec;
 
@@ -137,25 +136,23 @@ def sinusoidal_test():
     #output error and location of the block in seconds for blocks with nonzero error
     return err_nonzero, err_sec
    
-sinusoidal_test()
+#sinusoidal_test()
 
 # B.2 
 def convert_freq2midi(freqInHz):
   
     typ=type(freqInHz)
-    
+
     #convert frequency to MIDI pitch for a scalar
-    if typ==int or typ==float:
-        pitchInMIDI=round(69+12*np.log(freqInHz/440,2))
+    if freqInHz <= 0:
+        pitchInMIDI = 0
+    
+    else:
+        pitchInMIDI=round(69+12*np.log2(freqInHz/440))
    
     #do the same thing for a vector 
     #pitch function converts a single item, then np.vectorize applies it to an array
-    else:    
-        def pitch(x):
-            return round(69+12*np.log(x/440,2))
     
-        vectfunc=np.vectorize(pitch)
-        pitchInMIDI=list(vectfunc(freqInHz))
     return pitchInMIDI
 
 # B.3
@@ -163,20 +160,20 @@ def eval_pitchtrack(estimateInHz, groundtruthInHz):
 
     length = min(len(estimateInHz),len(groundtruthInHz))
 
-    def hz2cents(freq_hz, base_frequency=10.0):
-        freq_cent = np.zeros(freq_hz.shape[0])
-        freq_nonz_ind = np.flatnonzero(freq_hz)
-        normalized_frequency = np.abs(freq_hz[freq_nonz_ind])/base_frequency
-        freq_cent[freq_nonz_ind] = 1200*np.log2(normalized_frequency)
-        return freq_cent
-
-    estimateInHz = hz2cents(estimateInHz[:length])
-    groundtruthInHz = hz2cents(groundtruthInHz[:length])
-  
+    print (estimateInHz)
+    estimateInHz = np.array([convert_freq2midi(f) for f in estimateInHz]) #*100
+    groundtruthInHz = np.array([convert_freq2midi(f) for f in groundtruthInHz])#*100
+   
     non_zero = (groundtruthInHz>0)
+
     error = groundtruthInHz[non_zero] - estimateInHz[non_zero]
-    rms = sqrt(mean(square(error)))
-    return rms
+
+    rms = np.zeros(len(error))
+    for i in range (len(error)):
+        rms[i] = square(error[i])
+    mean1 = mean(rms)
+    rms1 = sqrt(mean1)
+    return rms1
 
 # B.4
 def run_evaluation():
@@ -205,6 +202,7 @@ def run_evaluation():
     files = ['01-D_AMairena','24-M1_AMairena-Martinete','63-M2_AMairena']
     for file in files:
         fs, wav = wavfile.read('./trainData/'+file+'.wav')
+
         f0, timeInSec = track_pitch_acf(wav, blockSize, hopSize, fs)
         
         gtHz = np.array(read_label('./trainData/'+file+'.f0.Corrected.txt',timeInSec)).astype(np.float)
