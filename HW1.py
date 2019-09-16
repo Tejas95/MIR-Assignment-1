@@ -161,6 +161,8 @@ def convert_freq2midi(freqInHz):
 # B.3
 def eval_pitchtrack(estimateInHz, groundtruthInHz):
 
+    length = min(len(estimateInHz),len(groundtruthInHz))
+
     def hz2cents(freq_hz, base_frequency=10.0):
         freq_cent = np.zeros(freq_hz.shape[0])
         freq_nonz_ind = np.flatnonzero(freq_hz)
@@ -168,9 +170,9 @@ def eval_pitchtrack(estimateInHz, groundtruthInHz):
         freq_cent[freq_nonz_ind] = 1200*np.log2(normalized_frequency)
         return freq_cent
 
-    estimateInHz = hz2cents(estimateInHz)
-    groundtruthInHz = hz2cents(groundtruthInHz)
-
+    estimateInHz = hz2cents(estimateInHz[:length])
+    groundtruthInHz = hz2cents(groundtruthInHz[:length])
+  
     non_zero = (groundtruthInHz>0)
     error = groundtruthInHz[non_zero] - estimateInHz[non_zero]
     rms = sqrt(mean(square(error)))
